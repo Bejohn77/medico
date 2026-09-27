@@ -1,0 +1,134 @@
+/* Mobile experience layer: desktop layout remains owned by styles.css. */
+.mobile-action-bar{display:none}
+.selection-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;background:var(--mint);color:var(--teal);font-size:12px}
+.selection-summary span{color:var(--muted);font-size:11px}
+.success-details{display:grid;gap:5px;width:min(100%,360px);padding:16px;background:var(--mint);color:var(--teal);font-size:13px;text-align:left}
+.success-details strong{font-size:12px;text-transform:uppercase;letter-spacing:.8px}
+.success-details .status-pill{justify-self:start}
+@media (max-width:700px){
+  html{overflow-x:hidden;scroll-behavior:smooth}
+  body{overflow-x:hidden;padding-bottom:72px}
+  .wrap{width:100%;padding-left:18px;padding-right:18px}
+  .header{height:68px;position:sticky;top:0}
+  .nav{padding-left:18px;padding-right:18px}
+  .brand{font-size:16px;min-width:0}
+  .brand-mark{width:32px;height:32px;flex:0 0 32px}
+  .nav-actions{gap:8px}
+  .nav-links{top:68px;max-height:calc(100dvh - 68px);overflow-y:auto;padding:12px 18px 18px;gap:2px}
+  .nav-links a{padding:14px 4px;font-size:15px;border-bottom:1px solid var(--line)}
+  .nav-links a:last-child{border-bottom:0}
+  .menu-button{width:44px;height:44px}
+  .hero-grid{padding-top:52px;padding-bottom:52px}
+  .hero-copy{padding-bottom:40px}
+  .hero h1{font-size:clamp(2.9rem,13vw,4rem);line-height:1.02;margin-bottom:18px}
+  .hero p{font-size:15px;line-height:1.55}
+  .hero-buttons{display:grid;grid-template-columns:1fr;gap:10px;margin:25px 0 28px}
+  .hero-buttons .button{width:100%;min-height:50px}
+  .hero-trust{font-size:11px;line-height:1.35}
+  .hero-visual img{height:auto;aspect-ratio:4/5;border-radius:96px 96px 8px 8px}
+  .floating-note{left:8px;bottom:14px;padding:11px 12px;max-width:calc(100% - 20px)}
+  .floating-note strong{font-size:11px}
+  .stats{padding-top:22px;padding-bottom:22px;gap:12px}
+  .stats strong{font-size:27px}
+  .stats span{font-size:11px;line-height:1.35}
+  .section{padding-top:68px;padding-bottom:68px}
+  .section-heading{margin-bottom:28px}
+  .section-heading h2{font-size:clamp(2.15rem,10vw,3rem);line-height:1.08}
+  .section-heading>p{font-size:14px;line-height:1.55}
+  .arrow-link{min-height:44px}
+  .feature-grid{gap:24px}
+  .feature{padding-top:17px}
+  .feature-icon{margin-bottom:14px}
+  .feature p{font-size:13px}
+  .service-grid{gap:16px}
+  .service-card>img{height:auto;aspect-ratio:16/10}
+  .service-card-body{padding:16px 16px 8px}
+  .service-card h3{font-size:17px}
+  .service-card-body p{font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .service-meta{padding:8px 16px 15px}
+  .doctor-band{gap:28px}
+  .doctor-image img{height:auto;aspect-ratio:4/5}
+  .doctor-copy h2{font-size:2.35rem}
+  .review-grid,.review-wall{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+  .review-card{min-width:calc(100vw - 44px);min-height:205px;padding:22px;scroll-snap-align:start}
+  .review-card p{font-size:19px}
+  .blog-grid{gap:17px}
+  .blog-card img{height:auto;aspect-ratio:16/10}
+  .blog-card h3{font-size:21px}
+  .cta{padding:34px 20px;margin-left:18px;margin-right:18px;margin-bottom:54px}
+  .cta h2{font-size:2.3rem}
+  .cta .button{width:100%;min-height:50px}
+  .page-hero{padding:58px 0 62px}
+  .page-hero h1{font-size:clamp(2.8rem,12vw,4rem)}
+  .two-col>div>img{height:auto;aspect-ratio:4/3}
+  .prose h2{font-size:2.35rem}
+  .intro-copy{font-size:16px;margin-bottom:30px}
+  .doctors-grid{gap:18px}
+  .doctor-card>img{height:auto;aspect-ratio:4/3}
+  .doctor-card-body{padding:19px}
+  .doctor-card h3{font-size:24px}
+  .doctor-details{gap:12px;align-items:flex-start}
+  .doctor-card .arrow-link{min-height:44px}
+  .detail-hero{padding:58px 0 64px}
+  .detail-grid{gap:28px}
+  .detail-grid>img{height:auto;aspect-ratio:4/3}
+  .detail-grid h1{font-size:clamp(2.8rem,12vw,4rem)}
+  .detail-grid p{font-size:15px}
+  .detail-meta{flex-wrap:wrap;gap:12px;font-size:12px}
+  .faq summary{gap:16px;min-height:44px;align-items:center}
+  .gallery-grid{gap:12px}
+  .gallery-grid figure{height:auto;aspect-ratio:4/3}
+  .article-head{padding:60px 18px 35px}
+  .article-head h1{font-size:clamp(2.5rem,11vw,3.7rem)}
+  .article>img{height:auto;aspect-ratio:16/10;width:calc(100% - 36px)}
+  .article-content{padding-top:38px;padding-bottom:65px}
+  .article-content p{font-size:18px;line-height:1.55}
+  .form-layout,.contact-grid{gap:34px}
+  .form-intro h2,.contact-panel h2{font-size:2.35rem}
+  .form-card{padding:20px 17px;gap:15px}
+  .field input,.field textarea,.field select{min-height:48px;padding:12px 13px;font-size:16px}
+  .field textarea{min-height:120px}
+  .form-row{gap:15px}
+  .form-card .button{min-height:52px}
+  .selection-summary{display:grid;justify-content:stretch}
+  .map-placeholder{height:220px;margin-bottom:54px;text-align:center}
+  .success-page{min-height:62vh;padding:25px 18px}
+  .success-page h1{font-size:clamp(2.8rem,12vw,4rem)}
+  .footer-grid{grid-template-columns:1fr;gap:27px;padding-bottom:10px}
+  .footer-grid>div:first-child{grid-column:auto}
+  .footer-grid a,.footer-grid p{font-size:13px}
+  .footer-bottom{font-size:10px}
+  .mobile-action-bar{position:fixed;z-index:30;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1.55fr;gap:1px;background:var(--line);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 24px rgba(23,50,56,.12)}
+  .mobile-action-bar a{display:flex;align-items:center;justify-content:center;gap:7px;min-height:58px;background:#fff;color:var(--teal);font-size:12px;font-weight:700}
+  .mobile-action-bar a:last-child{background:var(--teal);color:#fff}
+  .admin-main{padding:26px 14px 88px}
+  .admin-sidebar nav{padding-bottom:4px;scrollbar-width:none}
+  .admin-sidebar nav::-webkit-scrollbar{display:none}
+  .admin-sidebar nav button{min-height:44px}
+  .admin-top{margin-bottom:25px}
+  .admin-top h1{font-size:clamp(2rem,9vw,2.8rem)}
+  .admin-top .button{white-space:nowrap}
+  .metrics{gap:9px}
+  .metric{padding:13px}
+  .metric strong{font-size:28px}
+  .admin-panel{overflow:hidden}
+  .panel-heading{padding:18px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:700px}
+  .image-url{min-width:220px;min-height:42px}
+}
+@media (max-width:360px){
+  .wrap{padding-left:15px;padding-right:15px}
+  .nav{padding-left:15px;padding-right:15px}
+  .brand{font-size:15px}
+  .hero h1{font-size:2.8rem}
+  .stats{grid-template-columns:1fr 1fr}
+  .stats span{font-size:10px}
+  .cta{margin-left:15px;margin-right:15px;padding-left:17px;padding-right:17px}
+  .footer-grid{gap:22px}
+}
+@media (min-width:701px){.mobile-action-bar{display:none}}
+@media(min-width:901px){.clinical-shell .clinical-main .clinical-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.dashboard-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 22px}.dashboard-actions .button{min-height:40px}.assignment-toolbar{display:grid;grid-template-columns:1fr minmax(230px,.65fr);align-items:end;gap:14px;margin-bottom:18px}.assignment-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.8fr);gap:18px;align-items:start}.doctor-assignment-list{display:grid;gap:10px;margin-bottom:16px}.queue-filter{max-width:320px;margin-bottom:14px}.queue-list{display:grid;border-top:1px solid var(--line)}.queue-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;padding:16px 4px;border-bottom:1px solid var(--line)}.queue-row>div:first-child{display:grid;gap:4px}.queue-row small{color:var(--muted);font-size:12px}.queue-row p{margin:4px 0 0}.queue-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}.queue-actions select{min-width:130px;padding:8px;border:1px solid var(--line);background:#fff;color:var(--ink)}@media(max-width:900px){.assignment-grid{grid-template-columns:1fr}}@media(max-width:700px){.dashboard-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-actions .button{min-width:0;padding:10px 8px;font-size:11px}.assignment-toolbar{grid-template-columns:1fr}.queue-row{grid-template-columns:1fr;gap:10px}.queue-actions{align-items:flex-start}.queue-actions .button{flex:1 1 auto}.queue-actions .record-share{width:100%}}
+.clinical-shell .clinical-main .clinical-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.appointment-filters{display:grid;grid-template-columns:.8fr .8fr 1.7fr;gap:12px;margin-bottom:18px}.appointment-desk-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.appointment-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.appointment-desk-grid>.info-block{align-self:start}@media(max-width:900px){.clinical-shell .clinical-main .clinical-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.appointment-desk-grid{grid-template-columns:1fr}}@media(max-width:700px){.clinical-shell .clinical-main .clinical-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.appointment-filters{grid-template-columns:1fr}.appointment-actions .button{flex:1 1 42%}}
+.record-share{display:flex;align-items:center;gap:9px;color:var(--ink);font-size:13px;line-height:1.4}.record-share input{width:18px;height:18px;accent-color:var(--teal);flex:0 0 18px}.availability-form{margin-bottom:15px}.visit-chart{grid-column:1/-1;min-width:0}.visit-chart>span{display:block;margin-bottom:8px;font-size:12px;font-weight:700}.visit-chart .tooth-grid{display:grid;gap:6px}.visit-tooth-row{display:grid;grid-template-columns:repeat(16,minmax(25px,1fr));gap:4px}.patient-portal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.patient-portal-grid .info-block{min-width:0}.patient-portal .record-item small{grid-column:1/-1;color:var(--muted)}@media(max-width:700px){.patient-portal-grid{grid-template-columns:1fr}.visit-tooth-row{grid-template-columns:repeat(8,minmax(25px,1fr))}.visit-chart{overflow:hidden}.visit-tooth-row .tooth{min-width:0;padding:7px 1px;font-size:10px}}

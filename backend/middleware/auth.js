@@ -1,0 +1,53 @@
+import jwt from 'jsonwebtoken';
+import { Admin, Doctor, Patient } from '../models/index.js';
+
+export async function protect(req, res, next) {
+  try {
+    const token = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.slice(7)
+      : null;
+    if (!token) return res.status(401).json({ message: 'Authentication required' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role === 'doctor') {
+      req.doctor = await Doctor.findById(decoded.id).select('-password');
+      if (!req.doctor || req.doctor.status !== 'Active') return res.status(403).json({ message: 'Doctor account is inactive or unavailable' });
+      req.staffRole = 'doctor';
+      return next();
+    }
+    if (decoded.role && !['mainDoctor', 'admin'].includes(decoded.role)) return res.status(403).json({ message: 'Staff access required' });
+    req.admin = await Admin.findById(decoded.id).select('-password');
+    if (!req.admin) return res.status(401).json({ message: 'Invalid session' });
+    const configuredEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    const mainDoctor = configuredEmail
+      ? await Admin.findOne({ email: configuredEmail }).select('_id')
+      : await Admin.findOne().sort('createdAt').select('_id');
+    if (!mainDoctor || String(mainDoctor._id) !== String(req.admin._id)) return res.status(403).json({ message: 'Main Doctor access required' });
+    req.staffRole = 'mainDoctor';
+    next();
+  } catch {
+    res.status(401).json({ message: 'Invalid or expired session' });
+  }
+}
+
+export function protectAdmin(req, res, next) {
+  return protect(req, res, () => {
+    if (req.staffRole !== 'mainDoctor') return res.status(403).json({ message: 'Main Doctor access required' });
+    next();
+  });
+}
+
+export async function protectPatient(req, res, next) {
+  try {
+    const token = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.slice(7)
+      : null;
+    if (!token) return res.status(401).json({ message: 'Authentication required' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'patient') return res.status(403).json({ message: 'Patient access required' });
+    req.patient = await Patient.findById(decoded.id).select('-password');
+    if (!req.patient) return res.status(401).json({ message: 'Invalid session' });
+    next();
+  } catch {
+    res.status(401).json({ message: 'Invalid or expired session' });
+  }
+}
