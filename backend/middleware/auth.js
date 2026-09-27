@@ -1,5 +1,18 @@
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { Admin, Doctor, Patient } from '../models/index.js';
+import { getJwtSecret } from '../config/jwt.js';
+
+function handleAuthenticationError(error, res) {
+  if (error.code === 'JWT_CONFIG') {
+    return res.status(503).json({ message: 'Authentication service is not configured.' });
+  }
+  if (mongoose.connection.readyState !== 1 || error.name?.startsWith('Mongo') || error.name?.startsWith('Mongoose')) {
+    console.error('Authentication database operation failed.');
+    return res.status(503).json({ message: 'Authentication is temporarily unavailable.' });
+  }
+  return res.status(401).json({ message: 'Invalid or expired session' });
+}
 
 export async function protect(req, res, next) {
   try {
@@ -7,7 +20,7 @@ export async function protect(req, res, next) {
       ? req.headers.authorization.slice(7)
       : null;
     if (!token) return res.status(401).json({ message: 'Authentication required' });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     if (decoded.role === 'doctor') {
       req.doctor = await Doctor.findById(decoded.id).select('-password');
       if (!req.doctor || req.doctor.status !== 'Active') return res.status(403).json({ message: 'Doctor account is inactive or unavailable' });
@@ -24,8 +37,8 @@ export async function protect(req, res, next) {
     if (!mainDoctor || String(mainDoctor._id) !== String(req.admin._id)) return res.status(403).json({ message: 'Main Doctor access required' });
     req.staffRole = 'mainDoctor';
     next();
-  } catch {
-    res.status(401).json({ message: 'Invalid or expired session' });
+  } catch (error) {
+    handleAuthenticationError(error, res);
   }
 }
 
@@ -42,12 +55,12 @@ export async function protectPatient(req, res, next) {
       ? req.headers.authorization.slice(7)
       : null;
     if (!token) return res.status(401).json({ message: 'Authentication required' });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     if (decoded.role !== 'patient') return res.status(403).json({ message: 'Patient access required' });
     req.patient = await Patient.findById(decoded.id).select('-password');
     if (!req.patient) return res.status(401).json({ message: 'Invalid session' });
     next();
-  } catch {
-    res.status(401).json({ message: 'Invalid or expired session' });
+  } catch (error) {
+    handleAuthenticationError(error, res);
   }
 }

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -11,6 +10,8 @@ import { mkdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { connectDatabase } from './config/db.js';
+import { getMainDoctorConfig, normalizeEmail, syncMainDoctorCredentials } from './config/main-doctor.js';
+import { getJwtSecret } from './config/jwt.js';
 import { Admin, Doctor, Service, Patient, Appointment, Review, Gallery, Blog, ContactMessage, DentalRecord, Visit, MedicalDocument } from './models/index.js';
 import { protect, protectAdmin, protectPatient } from './middleware/auth.js';
 import { notFound, errorHandler } from './middleware/error.js';
@@ -19,7 +20,7 @@ const app=express(); app.use(helmet()); app.use(cors({origin:process.env.CLIENT_
 const uploadDirectory=path.resolve(fileURLToPath(new URL('./uploads/',import.meta.url)));mkdirSync(uploadDirectory,{recursive:true});
 const upload=multer({storage:multer.diskStorage({destination:uploadDirectory,filename:(req,file,done)=>done(null,`${randomUUID()}${path.extname(file.originalname).toLowerCase()}`)}),limits:{fileSize:10*1024*1024,files:1},fileFilter:(req,file,done)=>['application/pdf','image/jpeg','image/png','image/webp'].includes(file.mimetype)?done(null,true):done(Object.assign(new Error('Only PDF, JPEG, PNG, or WebP files are allowed'),{status:400}))});
 const resources={doctors:Doctor,services:Service,patients:Patient,reviews:Review,gallery:Gallery,blogs:Blog};
-const mainDoctorQuery=()=>{const email=String(process.env.ADMIN_EMAIL||'').trim().toLowerCase();return email?Admin.findOne({email}):Admin.findOne().sort('createdAt');};
+const mainDoctorQuery=()=>{const email=normalizeEmail(process.env.ADMIN_EMAIL);return email?Admin.findOne({email}):Admin.findOne().sort('createdAt');};
 const publicQueries={doctors:()=>Doctor.find({status:{$ne:'Inactive'}}).sort('-featured name'),services:()=>Service.find({published:true}).sort('-featured name'),gallery:()=>Gallery.find().sort('-createdAt'),reviews:()=>Review.find({approved:true}).sort('-createdAt'),blogs:()=>Blog.find({published:true}).sort('-createdAt')};
 app.get('/api/health',(req,res)=>res.json({ok:true}));
 for(const [name,query] of Object.entries(publicQueries)) app.get(`/api/${name}`,async(req,res)=>res.json(await query()));
@@ -32,7 +33,41 @@ app.get('/api/clinical/availability',protect,async(req,res)=>res.json(req.admin.
 app.patch('/api/clinical/availability',protect,async(req,res,next)=>{try{if(!Array.isArray(req.body.availability))return res.status(400).json({message:'Availability must be a list of working days'});const days=new Set();for(const entry of req.body.availability){const validTime=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);if(!Number.isInteger(entry.dayOfWeek)||entry.dayOfWeek<0||entry.dayOfWeek>6||days.has(entry.dayOfWeek)||!validTime(entry.startTime)||!validTime(entry.endTime)||entry.startTime>=entry.endTime||!Number.isInteger(Number(entry.slotMinutes))||Number(entry.slotMinutes)<5||Number(entry.slotMinutes)>240||Boolean(entry.breakStart)!==Boolean(entry.breakEnd)||(entry.breakStart&&(!validTime(entry.breakStart)||!validTime(entry.breakEnd)||entry.breakStart<entry.startTime||entry.breakEnd>entry.endTime||entry.breakStart>=entry.breakEnd)))return res.status(400).json({message:'Check working days, hours, break, and slot duration'});days.add(entry.dayOfWeek);}req.admin.availability=req.body.availability;await req.admin.save();res.json(req.admin.availability)}catch(e){next(e)}});
 app.post('/api/appointments',async(req,res,next)=>{try{const {name,phone,email,date,time,reason,message}=req.body;if(!date||!time||!String(reason||'').trim())return res.status(400).json({message:'Date, time, and a reason for the visit are required'});const day=parseDate(date);if(!day)return res.status(400).json({message:'Choose a valid appointment date'});const mainDoctor=await mainDoctorQuery();if(!mainDoctor)return res.status(503).json({message:'Online booking is not configured yet'});if(!(await availableSlots(date))?.includes(time))return res.status(409).json({message:'That appointment time is no longer available'});let patient=null;const token=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):null;if(token){const decoded=jwt.verify(token,process.env.JWT_SECRET);if(decoded.role==='patient')patient=await Patient.findById(decoded.id);else if(decoded.role!=='mainDoctor'&&decoded.role!=='admin')return res.status(401).json({message:'Invalid session'});}const normalizedEmail=typeof email==='string'&&email.trim()?email.trim().toLowerCase():undefined;if(!patient&&normalizedEmail){const existing=await Patient.findOne({email:normalizedEmail}).select('+password');if(existing?.password)return res.status(401).json({message:'Sign in to book with this patient account'});patient=existing;}if(!patient){if(typeof name!=='string'||!name.trim()||typeof phone!=='string'||!phone.trim())return res.status(400).json({message:'Name and phone are required for a guest booking'});patient=await Patient.create({name:name.trim(),phone:phone.trim(),email:normalizedEmail});}await DentalRecord.findOneAndUpdate({patient:patient._id},{$setOnInsert:{patient:patient._id}}, {upsert:true,new:true,setDefaultsOnInsert:true});const slotKey=`${mainDoctor._id}:${date}:${time}`;const appointment=await Appointment.create({patient,mainDoctor:mainDoctor._id,date:day,time,reason:String(reason).trim(),message,slotKey});res.status(201).json({message:'Appointment request received',appointment})}catch(e){if(e.code===11000)return res.status(409).json({message:'That appointment time is no longer available'});if(e.name==='JsonWebTokenError'||e.name==='TokenExpiredError')return res.status(401).json({message:'Invalid or expired session'});next(e)}});
 app.post('/api/contact',async(req,res,next)=>{try{const item=await ContactMessage.create(req.body);res.status(201).json({message:'Message sent successfully',item})}catch(e){next(e)}});
-app.post('/api/auth/login',async(req,res,next)=>{try{const email=String(req.body.email||'').trim().toLowerCase();const admin=await Admin.findOne({email});const configuredEmail=String(process.env.ADMIN_EMAIL||'').trim().toLowerCase();const mainDoctor=configuredEmail?await Admin.findOne({email:configuredEmail}).select('_id'):await Admin.findOne().sort('createdAt').select('_id');if(!admin||!mainDoctor||String(admin._id)!==String(mainDoctor._id)||!(await admin.comparePassword(req.body.password)))return res.status(401).json({message:'Invalid email or password'});const token=jwt.sign({id:admin._id,role:'mainDoctor'},process.env.JWT_SECRET,{expiresIn:'8h'});res.json({token,mainDoctor:{id:admin._id,name:admin.name,email:admin.email}})}catch(e){next(e)}});
+app.post('/api/auth/login', async (req, res, next) => {
+	try {
+		const { email: configuredEmail } = getMainDoctorConfig();
+		const email = normalizeEmail(req.body.email);
+		if (email !== configuredEmail) return res.status(401).json({ message: 'Invalid email or password' });
+
+		const admin = await Admin.findOne({ email: configuredEmail }).select('+password');
+		if (!admin) {
+			console.error('Configured Main Doctor account is missing; run password synchronization.');
+			return res.status(503).json({ message: 'Main Doctor account is not initialized.' });
+		}
+		let passwordMatches = false;
+		if (typeof req.body.password === 'string') {
+			try {
+				passwordMatches = await admin.comparePassword(req.body.password);
+			} catch {
+				passwordMatches = false;
+			}
+		}
+		if (!passwordMatches) {
+			return res.status(401).json({ message: 'Invalid email or password' });
+		}
+
+		const token = jwt.sign({ id: admin._id, role: 'mainDoctor' }, getJwtSecret(), { expiresIn: '8h' });
+		res.json({ token, mainDoctor: { id: admin._id, name: admin.name, email: admin.email } });
+	} catch (error) {
+		if (error.code === 'ADMIN_CONFIG') return res.status(503).json({ message: 'Main Doctor login is not configured.' });
+		if (error.code === 'JWT_CONFIG') return res.status(503).json({ message: 'Authentication service is not configured.' });
+		if (error.name?.startsWith('Mongo') || error.name?.startsWith('Mongoose') || mongoose.connection.readyState !== 1) {
+			console.error('Main Doctor login database operation failed.');
+			return res.status(503).json({ message: 'Login is temporarily unavailable.' });
+		}
+		next(error);
+	}
+});
 app.post('/api/auth/doctor/login',async(req,res,next)=>{try{const email=String(req.body.email||'').trim().toLowerCase();const doctor=await Doctor.findOne({email,status:'Active'}).select('+email +password');if(!doctor||!(await doctor.comparePassword(req.body.password||'')))return res.status(401).json({message:'Invalid email or password'});const token=jwt.sign({id:doctor._id,role:'doctor'},process.env.JWT_SECRET,{expiresIn:'8h'});res.json({token,doctor:{id:doctor._id,name:doctor.name,email:doctor.email}})}catch(e){next(e)}});
 app.get('/api/clinical/doctors',protectAdmin,async(req,res,next)=>{try{res.json(await Doctor.find().select('+email').sort('name'))}catch(e){next(e)}});
 app.patch('/api/clinical/doctors/:id/credentials',protectAdmin,async(req,res,next)=>{try{const doctor=await Doctor.findById(req.params.id).select('+email +password');if(!doctor)return res.status(404).json({message:'Doctor not found'});if(req.body.email!==undefined)doctor.email=String(req.body.email).trim().toLowerCase();if(req.body.password!==undefined){if(typeof req.body.password!=='string'||req.body.password.length<12||Buffer.byteLength(req.body.password)>72)return res.status(400).json({message:'Doctor passwords must be 12 to 72 bytes'});doctor.password=req.body.password;}await doctor.save();res.json({id:doctor._id,name:doctor.name,email:doctor.email,status:doctor.status})}catch(e){next(e)}});
@@ -107,4 +142,22 @@ app.get('/api/patient/documents/:id/download',protectPatient,async(req,res,next)
 app.delete('/api/clinical/documents/:id',protect,authorizeDocument,async(req,res,next)=>{try{const document=await MedicalDocument.findById(req.params.id);const filePath=path.resolve(uploadDirectory,document.storedName);if(!filePath.startsWith(`${uploadDirectory}${path.sep}`))return res.status(400).json({message:'Invalid document path'});try{unlinkSync(filePath)}catch(error){if(error.code!=='ENOENT')throw error;}await Promise.all([MedicalDocument.deleteOne({_id:document._id}),Visit.updateOne({_id:document.visit},{$pull:{documents:document._id}})]);res.json({message:'Document deleted'})}catch(e){next(e)}});
 app.get('/api/reviews/all',protectAdmin,async(req,res,next)=>{try{res.json(await Review.find().sort('-createdAt'))}catch(e){next(e)}});
 app.use(notFound);app.use(errorHandler);
-const port=process.env.PORT||5000; connectDatabase().then(async()=>{if(process.env.ADMIN_EMAIL&&process.env.ADMIN_PASSWORD&&!await Admin.exists({email:process.env.ADMIN_EMAIL}))await Admin.create({email:process.env.ADMIN_EMAIL,password:process.env.ADMIN_PASSWORD});app.listen(port,()=>console.log(`API running on ${port}`))}).catch(err=>{console.error(err);process.exit(1)});
+const port = process.env.PORT || 5000;
+async function startServer() {
+	try {
+		getMainDoctorConfig();
+		getJwtSecret();
+		await connectDatabase();
+		await syncMainDoctorCredentials();
+		app.listen(port, () => console.log(`API running on ${port}`));
+	} catch (error) {
+		if (error.code === 'ADMIN_CONFIG') console.error('Backend startup failed: configure valid ADMIN_EMAIL and ADMIN_PASSWORD.');
+		else if (error.code === 'JWT_CONFIG') console.error('Backend startup failed: configure a strong JWT_SECRET distinct from ADMIN_PASSWORD.');
+		else if (error.code === 'MONGODB_CONFIG' || error.code === 'MONGODB_CONNECTION' || error.name?.startsWith('Mongo') || error.name?.startsWith('Mongoose')) console.error('Backend startup failed: MongoDB connection failed.');
+		else console.error('Backend startup failed: Main Doctor synchronization failed.');
+		if (mongoose.connection.readyState) await mongoose.disconnect();
+		process.exitCode = 1;
+	}
+}
+
+startServer();

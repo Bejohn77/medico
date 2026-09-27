@@ -5,20 +5,21 @@ Dental clinic website and management workspace with a React frontend and Express
 ## Run locally
 
 1. Install Node.js 20+ and MongoDB.
-2. Copy `backend/.env.example` to `backend/.env` and set `MONGODB_URI`, a long random `JWT_SECRET`, and initial admin credentials.
+2. Copy `backend/.env.example` to `backend/.env` and set `MONGODB_URI`, a random `JWT_SECRET` of at least 32 bytes, `ADMIN_EMAIL`, and an `ADMIN_PASSWORD` of 12 to 72 UTF-8 bytes. Keep `JWT_SECRET` different from `ADMIN_PASSWORD`.
 3. Copy `frontend/.env.example` to `frontend/.env`.
 4. In `backend`, run `npm install` then `npm run dev`.
 5. In `frontend`, run `npm install` then `npm run dev`.
 6. Open `http://localhost:5173`. Main Doctor login is at `/admin/login`.
 
-If the Main Doctor password is unknown, run `npm run reset-main-doctor-password` from `backend/`. Enter the new password at the hidden terminal prompts. This updates only the primary Main Doctor credential; it does not modify patient or appointment data.
+Run `npm run reset-main-doctor-password` from `backend/` to synchronize the Main Doctor email and password from `backend/.env`. It updates the existing Main Doctor account when one exists, creates one only when the Admin collection is empty, and does not modify patient or appointment data. The command is safe to rerun.
 
 ## Render and Vercel deployment
 
 - Deploy `backend/` as a Render Web Service with build command `npm install` and start command `npm start`.
-- Set the backend environment variables in Render: `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`. `CLIENT_URL` must exactly match the deployed Vercel site origin.
+- Set the backend environment variables in Render: `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`. `JWT_SECRET` must be at least 32 bytes and different from `ADMIN_PASSWORD`; the password must be 12 to 72 UTF-8 bytes. `CLIENT_URL` must exactly match the deployed Vercel site origin.
 - Set `VITE_API_URL` in the Vercel project to `https://<render-service>.onrender.com/api`, then redeploy the frontend. This value is embedded at build time. Production builds no longer fall back to localhost when it is missing.
-- `ADMIN_PASSWORD` is used only to create the Main Doctor account when it does not already exist; changing it later does not change the database password. To reset the deployed account, run the password reset script from `backend/` with the production `MONGODB_URI` and `ADMIN_EMAIL` in your local environment, then enter a new password at the hidden prompts. Do not put production secrets in source control.
+- Backend startup and `npm run reset-main-doctor-password` both synchronize the existing Main Doctor account to `ADMIN_EMAIL` and `ADMIN_PASSWORD`; do not create a separate admin manually. To target production from your computer, temporarily set the Render `MONGODB_URI`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in the process environment before running the script. Do not put production secrets in source control.
+- Both commands load the same `backend/.env` relative to the backend files and connect through the same `connectDatabase()` function. The database name comes from the URI path; if no database name is present, MongoDB uses its `test` default for both.
 - Check `https://<render-service>.onrender.com/api/health` for `{"ok":true}` before testing login.
 
 Public-site images remain URL strings stored in MongoDB. Clinical uploads are private files stored under `backend/uploads/`; persist and back up this directory in deployment. Uploads accept PDF/JPEG/PNG/WebP up to 10 MB and are only served by authenticated download endpoints, never as a public static directory.
