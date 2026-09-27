@@ -13,6 +13,14 @@ Dental clinic website and management workspace with a React frontend and Express
 
 If the Main Doctor password is unknown, run `npm run reset-main-doctor-password` from `backend/`. Enter the new password at the hidden terminal prompts. This updates only the primary Main Doctor credential; it does not modify patient or appointment data.
 
+## Render and Vercel deployment
+
+- Deploy `backend/` as a Render Web Service with build command `npm install` and start command `npm start`.
+- Set the backend environment variables in Render: `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`. `CLIENT_URL` must exactly match the deployed Vercel site origin.
+- Set `VITE_API_URL` in the Vercel project to `https://<render-service>.onrender.com/api`, then redeploy the frontend. This value is embedded at build time. Production builds no longer fall back to localhost when it is missing.
+- `ADMIN_PASSWORD` is used only to create the Main Doctor account when it does not already exist; changing it later does not change the database password. To reset the deployed account, run the password reset script from `backend/` with the production `MONGODB_URI` and `ADMIN_EMAIL` in your local environment, then enter a new password at the hidden prompts. Do not put production secrets in source control.
+- Check `https://<render-service>.onrender.com/api/health` for `{"ok":true}` before testing login.
+
 Public-site images remain URL strings stored in MongoDB. Clinical uploads are private files stored under `backend/uploads/`; persist and back up this directory in deployment. Uploads accept PDF/JPEG/PNG/WebP up to 10 MB and are only served by authenticated download endpoints, never as a public static directory.
 
 ## API
